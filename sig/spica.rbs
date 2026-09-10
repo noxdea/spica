@@ -1,0 +1,84 @@
+module Spica
+  VERSION: String
+  DEFAULT_OPTIONS: Options
+
+  class Error < StandardError
+  end
+
+  def self.match: (String query, String candidate, ?options: Options, **untyped settings) -> Match?
+  def self.score: (String query, String candidate, ?options: Options, **untyped settings) -> Float
+  def self.filter: (String query, Array[String] candidates, ?limit: Integer?, **untyped settings) -> Array[Match]
+
+  class Options < Struct[untyped]
+    attr_reader case_sensitivity: Symbol
+    attr_reader path_mode: bool
+    attr_reader limit: Integer
+    attr_reader tie_break: Symbol
+    attr_reader consecutive: Float
+    attr_reader boundary: Float
+    attr_reader slash: Float
+    attr_reader camel: Float
+    attr_reader dot: Float
+    attr_reader basename_bonus: Float
+    attr_reader leading_gap: Float
+    attr_reader inner_gap: Float
+    attr_reader trailing_gap: Float
+    attr_reader case_bonus: Float
+    attr_reader max_length: Integer
+    attr_reader max_query: Integer
+    attr_reader scoring: Array[untyped]
+    def initialize: (?case_sensitivity: Symbol, ?path_mode: bool, ?limit: Integer, ?tie_break: Symbol,
+      ?consecutive: Numeric, ?boundary: Numeric, ?slash: Numeric, ?camel: Numeric, ?dot: Numeric,
+      ?basename_bonus: Numeric, ?leading_gap: Numeric, ?inner_gap: Numeric, ?trailing_gap: Numeric,
+      ?case_bonus: Numeric, ?max_length: Integer, ?max_query: Integer) -> void
+    def to_h: () -> Hash[Symbol, untyped]
+  end
+
+  class Match < Struct[untyped]
+    attr_reader candidate: String
+    attr_reader score: Float
+    attr_reader positions: Array[Integer]
+    attr_reader index: Integer
+    alias text candidate
+    def to_s: () -> String
+  end
+
+  class Candidate
+    attr_reader text: String
+    attr_reader chars: String | Array[String]
+    attr_reader folded: String | Array[String]
+    attr_reader mask: Integer?
+    attr_reader unicode: Hash[String, bool]?
+    attr_reader index: Integer
+    attr_reader basename: Integer
+    attr_reader bonuses: String
+    attr_reader length: Integer
+    def ascii_only?: () -> bool
+    def initialize: (String text, Integer index, ?precompute_mask: bool) -> void
+  end
+
+  class Matcher
+    def initialize: (String query, ?Options options) -> void
+    def score: (Candidate candidate) -> Float?
+    def match: (Candidate candidate) -> Match?
+  end
+
+  class Index
+    attr_reader options: Options
+    attr_reader generation: Integer
+    def initialize: (?Array[String] candidates, ?options: Options, **untyped settings) -> void
+    def add: (String | Array[String] candidates) -> self
+    def remove: (String | Array[String] candidates) -> self
+    def size: () -> Integer
+    def candidates: () -> Array[Candidate]
+    def session: () -> Session
+  end
+
+  class Session
+    attr_reader query: String
+    def initialize: (Index index) -> void
+    def query=: (String query) -> String
+    def matches: (?Integer limit) -> Array[Match]
+    def total_matches: () -> Integer
+  end
+end

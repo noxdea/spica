@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#020617">
+    <meta name="description" content="Spica is a fast, deterministic fuzzy matcher for Ruby command palettes and quick-open lists.">
+    <meta property="og:title" content="Spica — Fuzzy matching for Ruby">
+    <meta property="og:description" content="Scored matches, highlight positions, and incremental filtering. Pure Ruby, zero runtime dependencies.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://noxdea.github.io/spica/">
+    <title>Spica — Fuzzy matching for Ruby</title>
+    <link rel="stylesheet" href="./style.css">
+  </head>
+  <body class="min-h-dvh bg-slate-950 font-sans text-slate-300 antialiased selection:bg-amber-300 selection:text-slate-950">
+    <a href="#main" class="sr-only rounded bg-amber-300 px-4 py-2 font-semibold text-slate-950 focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50">Skip to content</a>
+
+    <header class="border-b border-slate-800">
+      <nav class="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-8" aria-label="Main navigation">
+        <a href="#main" class="flex items-center gap-3 rounded-sm text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">
+          <svg class="size-6 text-amber-300" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2v20M12 6c-3 0-5-1.5-6-4 3 0 5 1.5 6 4Zm0 5c3 0 5-1.5 6-4-3 0-5 1.5-6 4Zm0 5c-3 0-5-1.5-6-4 3 0 5 1.5 6 4Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="font-serif text-2xl font-semibold text-balance">Spica</span>
+        </a>
+        <div class="flex items-center gap-6 text-sm font-medium">
+          <a href="#performance" class="hidden rounded-sm text-slate-400 outline-none hover:text-slate-100 focus-visible:ring-2 focus-visible:ring-amber-300 sm:inline">Performance</a>
+          <a href="https://github.com/noxdea/spica" class="rounded-sm text-slate-200 underline decoration-slate-600 underline-offset-4 outline-none hover:decoration-amber-300 focus-visible:ring-2 focus-visible:ring-amber-300">GitHub</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="mx-auto grid max-w-7xl gap-16 px-6 py-20 lg:grid-cols-12 lg:px-8 lg:py-32">
+        <div class="min-w-0 lg:col-span-6">
+          <p class="mb-8 flex items-center gap-3 text-sm font-medium text-slate-400">
+            <svg class="size-2 fill-amber-300" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4"/></svg>
+            Pure Ruby, version 0.1.0
+          </p>
+          <h1 class="max-w-3xl font-serif text-5xl font-semibold leading-none text-slate-50 text-balance sm:text-7xl lg:text-8xl">
+            Find the right path before the next keystroke.
+          </h1>
+          <p class="mt-8 max-w-xl text-lg leading-8 text-slate-400 text-pretty sm:text-xl">
+            Spica ranks fuzzy subsequence matches, returns the exact characters to highlight, and reuses work as a query grows.
+          </p>
+          <div class="mt-10 flex flex-col gap-3 sm:flex-row">
+            <a href="https://rubygems.org/gems/spica" class="inline-flex min-h-12 items-center justify-center rounded-md bg-amber-300 px-6 py-3 font-semibold text-slate-950 outline-none hover:bg-amber-200 focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">
+              Install the gem
+            </a>
+            <a href="https://github.com/noxdea/spica#quick-start" class="inline-flex min-h-12 items-center justify-center rounded-md border border-slate-700 px-6 py-3 font-semibold text-slate-100 outline-none hover:border-slate-500 hover:bg-slate-900 focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">
+              Read the quick start
+            </a>
+          </div>
+        </div>
+
+        <div class="min-w-0 self-end lg:col-span-6 lg:pb-2">
+          <div class="overflow-hidden rounded-lg border border-slate-700 bg-slate-900 shadow-2xl shadow-black/40">
+            <div class="flex items-center justify-between border-b border-slate-700 px-5 py-4 text-sm">
+              <span class="text-slate-500">Query</span>
+              <span class="font-mono text-amber-300">amu</span>
+            </div>
+            <div class="border-b border-slate-800 bg-slate-800/60 px-5 py-7 font-mono text-lg text-slate-200 sm:px-8 sm:text-2xl">
+              <span class="text-amber-300">a</span>pp/<span class="text-amber-300">m</span>odels/<span class="text-amber-300">u</span>ser.rb
+            </div>
+            <div class="space-y-1 px-5 py-4 font-mono text-sm sm:px-8">
+              <p class="rounded px-3 py-2 text-slate-400"><span class="text-amber-300">a</span>pp/<span class="text-amber-300">m</span>odels/admin_<span class="text-amber-300">u</span>ser.rb</p>
+              <p class="rounded px-3 py-2 text-slate-500"><span class="text-amber-300">a</span>pp/<span class="text-amber-300">m</span>ailers/<span class="text-amber-300">u</span>ser_mailer.rb</p>
+            </div>
+            <div class="flex flex-wrap justify-between gap-2 border-t border-slate-700 px-5 py-4 text-xs text-slate-500 sm:px-8">
+              <span><span class="tabular-nums text-slate-300">10,000</span> matches</span>
+              <span><span class="tabular-nums text-slate-300">4.93 ms</span> first key</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="performance" class="border-y border-slate-800 bg-slate-900/40">
+        <div class="mx-auto grid max-w-7xl divide-y divide-slate-800 px-6 sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:px-8">
+          <div class="py-8 sm:px-8 sm:first:pl-0">
+            <p class="font-serif text-4xl font-semibold text-slate-50 tabular-nums text-balance">4.93 ms</p>
+            <p class="mt-2 max-w-xs text-sm leading-6 text-slate-500 text-pretty">First-key filtering across 100,000 candidate paths</p>
+          </div>
+          <div class="py-8 sm:px-8">
+            <p class="font-serif text-4xl font-semibold text-slate-50 tabular-nums text-balance">2.39 ms</p>
+            <p class="mt-2 max-w-xs text-sm leading-6 text-slate-500 text-pretty">Second key scans only the 10,000 retained matches</p>
+          </div>
+          <div class="py-8 sm:px-8 sm:last:pr-0">
+            <p class="font-serif text-4xl font-semibold text-slate-50 tabular-nums text-balance">0</p>
+            <p class="mt-2 max-w-xs text-sm leading-6 text-slate-500 text-pretty">Runtime dependencies and native extensions</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="mx-auto max-w-7xl px-6 py-20 lg:px-8 lg:py-28">
+        <div class="grid gap-12 lg:grid-cols-12">
+          <div class="lg:col-span-4">
+            <h2 class="font-serif text-4xl font-semibold text-slate-50 text-balance sm:text-5xl">Made for the search loop.</h2>
+            <p class="mt-5 max-w-sm leading-7 text-slate-400 text-pretty">The small details a command palette needs are part of the result, not work left for your UI.</p>
+          </div>
+          <ul class="border-t border-slate-700 lg:col-span-7 lg:col-start-6">
+            <li class="grid gap-3 border-b border-slate-800 py-7 sm:grid-cols-5">
+              <h3 class="font-semibold text-slate-100 sm:col-span-2">Incremental by design</h3>
+              <p class="leading-7 text-slate-400 text-pretty sm:col-span-3">Prefix history and cached backspace results keep repeated queries lean.</p>
+            </li>
+            <li class="grid gap-3 border-b border-slate-800 py-7 sm:grid-cols-5">
+              <h3 class="font-semibold text-slate-100 sm:col-span-2">Highlights included</h3>
+              <p class="leading-7 text-slate-400 text-pretty sm:col-span-3">Each match carries Unicode character positions, ready for accurate emphasis.</p>
+            </li>
+            <li class="grid gap-3 border-b border-slate-800 py-7 sm:grid-cols-5">
+              <h3 class="font-semibold text-slate-100 sm:col-span-2">Stable ranking</h3>
+              <p class="leading-7 text-slate-400 text-pretty sm:col-span-3">Configurable fzy-style scoring and deterministic tie-breaking prevent flicker.</p>
+            </li>
+            <li class="grid gap-3 border-b border-slate-800 py-7 sm:grid-cols-5">
+              <h3 class="font-semibold text-slate-100 sm:col-span-2">Safe to ship</h3>
+              <p class="leading-7 text-slate-400 text-pretty sm:col-span-3">Pure Ruby 3.1+, immutable results, smart case, and RBS signatures.</p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="mx-auto max-w-7xl px-6 pb-24 lg:px-8 lg:pb-32">
+        <div class="grid overflow-hidden rounded-lg border border-slate-700 bg-slate-900 lg:grid-cols-12">
+          <div class="border-b border-slate-700 p-8 lg:col-span-5 lg:border-b-0 lg:border-r lg:p-12">
+            <h2 class="font-serif text-4xl font-semibold text-slate-50 text-balance">From install to ranked results.</h2>
+            <p class="mt-5 max-w-sm leading-7 text-slate-400 text-pretty">Use one call for a list, or keep an index and session for an interactive palette.</p>
+            <a href="https://github.com/noxdea/spica#api" class="mt-8 inline-block rounded-sm font-semibold text-amber-300 underline decoration-amber-300/50 underline-offset-4 outline-none hover:decoration-amber-300 focus-visible:ring-2 focus-visible:ring-amber-300">Explore the API</a>
+          </div>
+          <div class="min-w-0 overflow-x-auto p-8 lg:col-span-7 lg:p-12">
+            <pre class="min-w-max font-mono text-sm leading-7 text-slate-300"><code><span class="text-slate-500">$</span> gem install spica
+
+<span class="text-amber-300">require</span> <span class="text-slate-100">"spica"</span>
+
+candidates = [
+  <span class="text-slate-100">"app/models/user.rb"</span>,
+  <span class="text-slate-100">"app/models/order.rb"</span>,
+  <span class="text-slate-100">"README.md"</span>
+]
+
+Spica.filter(<span class="text-slate-100">"amu"</span>, candidates, limit: <span class="tabular-nums">3</span>)</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="border-t border-slate-800">
+        <div class="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-6 py-16 sm:flex-row sm:items-center lg:px-8">
+          <div>
+            <h2 class="font-serif text-3xl font-semibold text-slate-50 text-balance">Separate the signal from the noise.</h2>
+            <p class="mt-3 text-slate-400 text-pretty">MIT licensed. Built for Ruby 3.1 and newer.</p>
+          </div>
+          <a href="https://github.com/noxdea/spica" class="inline-flex min-h-12 shrink-0 items-center justify-center rounded-md bg-amber-300 px-6 py-3 font-semibold text-slate-950 outline-none hover:bg-amber-200 focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">View the source</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="border-t border-slate-800">
+      <div class="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-8 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between lg:px-8">
+        <p>Spica separates useful matches from a large candidate list.</p>
+        <p>© 2026 Yudai Takada. MIT licensed.</p>
+      </div>
+    </footer>
+  </body>
+</html>

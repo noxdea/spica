@@ -1,132 +1,211 @@
-# Spica
+<h1 align="center">Spica</h1>
 
-A pure Ruby fuzzy subsequence matcher with scores, highlight positions and incremental filtering for command palettes and quick-open lists.
+<p align="center">
+  <strong>Pure Ruby fuzzy subsequence matching with scoring, highlights, and incremental filtering</strong>
+</p>
 
-Edit-distance similarity is not enough for a palette: `amu` should find `app/models/user.rb`, rank its alignment, and tell the UI which characters to highlight. Spica combines that contract with reusable candidate preprocessing and query history. It requires Ruby 3.1+ and has no runtime gems or native extensions.
+<p align="center">
+  <a href="https://rubygems.org/gems/spica"><img src="https://img.shields.io/gem/v/spica.svg?colorB=319e8c" alt="Gem version"></a>
+  <a href="https://rubygems.org/gems/spica"><img src="https://img.shields.io/gem/dt/spica.svg" alt="Gem downloads"></a>
+  <a href="https://github.com/noxdea/spica/actions/workflows/main.yml"><img src="https://github.com/noxdea/spica/actions/workflows/main.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/ruby-%3E%3D%203.1-CC342D.svg" alt="Ruby 3.1 or newer">
+  <a href="LICENSE.txt"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
+</p>
 
-## Five-line example
+<p align="center">
+  <a href="#features">Features</a> ·
+  <a href="#installation">Installation</a> ·
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#api">API</a> ·
+  <a href="#configuration">Configuration</a> ·
+  <a href="#performance">Performance</a>
+</p>
 
-```ruby
-require "spica"
-index = Spica::Index.new(["app/models/user.rb", "app/models/order.rb", "README.md"])
-session = index.session
-session.query = "amu"
-p session.matches(50).map { |match| [match.candidate, match.score, match.positions] }
-```
+---
+
+Spica is a fuzzy matcher for command palettes and quick-open lists. It ranks subsequence matches, returns the character positions to highlight, and reuses previous results as a query grows. It has no runtime dependencies or native extensions.
+
+## Features
+
+- fzy-style scoring with optimal alignments inside configurable length limits
+- Highlight positions as Unicode character offsets
+- Incremental filtering, prefix history, and cached backspace results
+- Deterministic ranking with configurable tie-breaking and path bonuses
+- Smart-case, case-sensitive, and case-insensitive matching
+- Mutable indexes with immutable candidate records and results
+- RBS type signatures
 
 ## Installation
+
+Add Spica to your Gemfile:
+
+```ruby
+gem "spica"
+```
+
+Then run:
+
+```sh
+bundle install
+```
+
+Or install it directly:
 
 ```sh
 gem install spica
 ```
 
-## Stateless or incremental
+Spica requires Ruby 3.1 or newer. A C compiler is only used by an optional development oracle.
+
+## Quick start
 
 ```ruby
-Spica.score("amf", "app/models/foo.rb")  # Float; -Float::INFINITY if absent
-match = Spica.match("amu", "app/models/user.rb")
-match.positions                           # [0, 4, 11]
-match.score                               # optimal weighted alignment score
-Spica.match("xyz", "README.md")          # nil
-Spica.filter("srcm", candidates, limit: 50)  # Array<Match>
+require "spica"
+
+candidates = ["app/models/user.rb", "app/models/order.rb", "README.md"]
+
+Spica.filter("amu", candidates, limit: 3).each do |match|
+  p [match.candidate, match.positions]
+end
+
+# ["app/models/user.rb", [0, 4, 11]]
 ```
 
-Positions are Unicode **character offsets**, not bytes or grapheme-cluster indices. Results, their strings/positions, and returned top arrays are immutable. `Match#text` aliases `candidate`; `index` is the stable registration ID.
+## API
+
+### One-shot matching
+
+```ruby
+Spica.score("amf", "app/models/foo.rb")
+# => a Float, or -Float::INFINITY when there is no match
+
+match = Spica.match("amu", "app/models/user.rb")
+match.candidate # => "app/models/user.rb"
+match.score     # => weighted alignment score
+match.positions # => [0, 4, 11]
+
+Spica.match("xyz", "README.md")
+# => nil
+```
+
+`Spica.filter` ranks a collection in one call. For repeated queries over the same candidates, use an index and session instead.
+
+### Incremental filtering
 
 ```ruby
 index = Spica::Index.new(paths)
 session = index.session
-session.query = "c";   session.matches(50)
-session.query = "co";  session.matches(50)  # only previous matches are rescored
-session.query = "con"; session.matches(50)
-session.query = "co";  session.matches(50)  # cached match set and results
 
-index.add(["new/file.rb"])
-index.remove(["deleted/file.rb"])
-session.matches(50)                    # index generation invalidates old history
-session.total_matches                  # all matches, not only the first 50
+session.query = "c"
+session.matches(50)
+
+session.query = "co"
+session.matches(50) # rescans only the previous matches
+
+session.query = "c"
+session.matches(50) # reuses the cached result
+
+index.add("new/file.rb")
+index.remove("deleted/file.rb")
+session.matches(50) # index changes invalidate the old history
+
+session.total_matches # total before the display limit
 ```
 
-Indices deduplicate identical text; removing and re-adding a path gives it a new registration ID. Original input strings can be edited without changing indexed records. A session retains the active prefix chain; unrelated pasted queries restart from the full index. Limiting the displayed top list never discards candidates needed for the next query.
+Build one index per candidate collection and one session per independent palette. Serialize index mutations, and do not share a session between concurrent callers.
 
-A larger `matches(limit)` recomputes partial selection; a repeated or smaller limit reuses cached results. Build one Index per candidate collection and one Session per independent palette. Candidate records and Options are frozen, while Index mutations and Session operations are explicitly stateful: serialize mutations, and do not share a Session between concurrent callers.
+Indexes deduplicate identical text. Removing and re-adding a candidate assigns it a new registration ID. Input strings are copied when needed, and returned matches, positions, and result arrays are frozen.
 
-## Scoring and options
+`Match#text` aliases `candidate`; `Match#index` is the stable registration ID. A session keeps the active prefix chain, while an unrelated query restarts from the full index. Display limits never discard candidates needed by the next query.
 
-The score is an optimal fzy-style subsequence alignment for inputs within the configured ceilings. A sparse D/M recurrence visits matching positions, carrying the best intervening-gap score instead of materializing every matrix cell. Score-only scans reuse two rows; highlight backtracking runs only for selected results. One-/two-character queries have equivalent scalar recurrences, and a contiguous match can stop early only when it reaches a proven global score upper bound.
+## Configuration
 
-The subsequence precheck also scores an alignment directly when every remaining query character has exactly one occurrence. Ambiguous alignments still use the full recurrence. Membership masks and DP scratch rows are prepared only when needed, avoiding unused preprocessing in stateless calls.
+Pass settings directly or reuse an immutable `Spica::Options` instance:
 
 ```ruby
 options = Spica::Options.new(
-  case_sensitivity: :smart,  # :smart, :insensitive, :sensitive
+  case_sensitivity: :smart,
   path_mode: true,
   limit: 100,
   tie_break: :shorter
 )
+
 index = Spica::Index.new(paths, options:)
 Spica.match("cf", "core/File.rb", options:)
 ```
 
-Smart case is case-insensitive unless the query contains an uppercase character. Default ties are resolved by score descending, candidate character length ascending, then registration ID ascending. `tie_break: :index` skips the length criterion. Exact matches score positive infinity; an empty query matches every candidate with score zero.
+| Option | Default | Description |
+| --- | --- | --- |
+| `case_sensitivity` | `:smart` | `:smart`, `:sensitive`, or `:insensitive` |
+| `path_mode` | `false` | Adds `basename_bonus` to nonconsecutive basename matches |
+| `limit` | `100` | Default number of session results |
+| `tie_break` | `:shorter` | Prefer shorter candidates, or use `:index` for registration order |
+| `max_length` | `1024` | Longest candidate guaranteed to use optimal alignment |
+| `max_query` | `256` | Longest query guaranteed to use optimal alignment |
 
-Default weights preserve the upstream public fzy ranking cases:
+The scoring weights are also configurable:
 
-| Option | Default |
-| --- | ---: |
-| `consecutive` | 1.0 |
-| `slash` (also start of candidate / Windows separator) | 0.9 |
-| `boundary` (after dash, underscore or space) | 0.8 |
-| `camel` | 0.7 |
-| `dot` | 0.6 |
-| `leading_gap` / `trailing_gap` | -0.005 |
-| `inner_gap` | -0.01 |
-| `case_bonus` (exact-case micro-bonus, opt-in) | 0.0 |
-| `basename_bonus` (used when `path_mode: true`) | 0.2 |
+| Option | Default | Description |
+| --- | ---: | --- |
+| `consecutive` | 1.0 | Consecutive-character bonus |
+| `slash` | 0.9 | Bonus at the candidate start and after a path separator |
+| `boundary` | 0.8 | Bonus after a dash, underscore, or space |
+| `camel` | 0.7 | Lowercase-to-uppercase boundary bonus |
+| `dot` | 0.6 | Bonus after a dot |
+| `leading_gap` | -0.005 | Gap penalty before the match |
+| `inner_gap` | -0.01 | Gap penalty inside the match |
+| `trailing_gap` | -0.005 | Gap penalty after the match |
+| `case_bonus` | 0.0 | Exact-case bonus |
+| `basename_bonus` | 0.2 | Path-mode basename bonus |
 
-Path mode adds a configurable bonus to nonconsecutive matches within the basename. Its default is off for fzy-compatible ranking. All weights are configurable finite real numbers; millipoint-exact weights use integer internal arithmetic so mathematically equal scores do not flicker from floating-point accumulation order.
+All weights must be finite real numbers. Default weights preserve the public fzy ranking cases; exact-case and basename bonuses are opt-in.
 
-The index precomputes folded ASCII strings, a 128-bit membership mask plus Unicode membership, boundary codes and basename offsets. Non-ASCII text keeps one lowercase mapping per original character. This preserves highlight positions through expanding lowercase mappings, but deliberately does not perform full Unicode case folding, normalization or grapheme matching: `ss` is not a substitute for `ß`, and composed/decomposed text is not silently normalized.
+### Matching behavior
 
-Candidates longer than `max_length: 1024` or queries longer than `max_query: 256` use bounded-memory greedy alignment when an exact fast path is unavailable. They remain valid subsequence matches, but their score/positions are not promised optimal. No edit distance, token rearrangement, transliteration or phonetic matching is performed. Invalid text/options raise `ArgumentError`.
+- Smart case is insensitive unless the query contains an uppercase character.
+- Default ties use score descending, candidate character length ascending, then registration ID ascending.
+- Exact matches score positive infinity; an empty query matches every candidate with score zero.
+- Positions are Unicode character offsets, not byte or grapheme-cluster indices.
+- Unicode text preserves positions through expanding lowercase mappings, but Spica does not normalize text or perform full Unicode case folding. For example, `ss` does not match `ß`.
+- Candidates longer than `max_length` or queries longer than `max_query` use bounded-memory greedy alignment when an exact fast path is unavailable. They remain valid subsequence matches, but their score and positions may not be optimal.
+- Spica does not provide edit distance, token rearrangement, transliteration, or phonetic matching.
+- Invalid text and options raise `ArgumentError`.
 
-## Verification
+## Performance
 
-```sh
-bundle install
-bundle exec rake
-bundle exec rake test:oracle
-BUDGET=1 bundle exec rake bench
-rbs -I sig validate
-yard doc
-```
-
-Tests include 2,000 Unicode position properties, 3,000 comparisons against an independent dense recurrence with varied weights, randomized heap/top and session consistency, encoding/case behavior, deterministic ties, cache invalidation and malformed options.
-
-The optional native oracle compiles the pinned, unmodified [upstream fzy scorer](test/vendor/fzy/README.md) in a temporary directory. It checks **all eight public ranking assertions** plus 500 seeded ASCII score comparisons. A compiler is only needed for this development oracle; the library works with `ruby --disable-gems`. `FZY_REQUIRED=1` makes a missing compiler fail instead of skip. Linux CI requires the oracle; macOS/Windows run it when a compiler is available. Isolation checks build/install the gem into a temporary GEM_HOME and emit results without development/application dependencies.
-
-## Measured performance
-
-Ruby 4.0.0 + YJIT, arm64 macOS; median of five warmed runs. The representative corpus has 100,000 paths, of which the first query `c` retains 10,000; the next query scans those 10,000. Timings include `query=` and `matches(50)`.
+Measured on Ruby 4.0.0 with YJIT on arm64 macOS. Values are medians of five warmed runs. The representative corpus contains 100,000 paths; the first query retains 10,000 candidates, and the second scans those 10,000.
 
 | Workload | Measured | Goal |
 | --- | ---: | ---: |
-| Build 100,000-candidate index | 87.83ms | <400ms |
+| Build a 100,000-candidate index | 87.83ms | <400ms |
 | First key, 100,000 → 10,000 matches | 4.93ms | <40ms |
 | Second key `co`, 10,000 candidates | 2.39ms | <5ms |
 | Noncontiguous `cm`, 10,000 candidates | 3.13ms | — |
 | Longer `component_123` query | 2.82ms | — |
 | Cached backspace | 0.002ms | <1ms |
 | Stateless `score("amf", "app/models/foo.rb")` | 2.18µs | <3µs |
-| Adversarial first key matching all 100,000 | 15.23ms | — |
-| Adversarial second key still matching all 100,000 | 11.54ms | — |
+| First key matching all 100,000 candidates | 15.23ms | — |
+| Second key still matching all 100,000 candidates | 11.54ms | — |
 
-The 5ms second-key target applies to the specified **10,000 remaining candidates**, not 100,000 matches. The benchmark retains and reports the all-hit stress case separately. Performance depends on candidate/query distribution and hardware; these measurements are not worst-case guarantees.
+Performance depends on the candidate distribution and hardware; these are not worst-case guarantees. Retained candidate records measured 34.33MiB, excluding the index hash and input array. This exceeds the original roughly 10MiB design estimate and is not a passed memory target. Run `BUDGET=1 bundle exec rake bench` to reproduce the benchmark and its timing gates.
 
-A subsequent stateless-score CI regression check compared `4af16c3` with the unique-alignment/lazy-preparation fix on Ruby 4.0.6 + YJIT, Linux arm64, Bundler 4.0.19. Three alternating `BUDGET=1 bundle exec rake bench` pairs (each reporting five warmed runs) reduced the median stateless call from 2.62µs to 1.20µs; all gates passed in all three corrected runs. The same-call allocation count fell from 15 to 6 objects. The original failing GitHub x86_64 runner measured 5.17µs; these local measurements are not a rerun on that hardware. Neither the 3µs limit nor the benchmark workload was changed.
+## Development
 
-Retained candidate records measured 34.33MiB, about 360 bytes per candidate, excluding the Index hash and input array. This exceeds the design estimate of roughly 100 bytes per candidate / 10MB for 100,000; it is a known Ruby object-overhead tradeoff, not a passed memory target. `bench/search.rb` reports both timing gates and retained-size measurements.
+```sh
+bundle install
+bundle exec rake
+bundle exec rake test:oracle
+BUDGET=1 bundle exec rake bench
+```
 
-## Name and license
+The test suite covers Unicode positions, randomized session and ranking behavior, deterministic ties, cache invalidation, malformed options, and comparisons with an independent dense recurrence. The native oracle uses the pinned [upstream fzy scorer](test/vendor/fzy/README.md); it is optional without a compiler and required in Linux CI.
 
-A spica separates grain from chaff; this library separates useful palette matches from a large candidate list. MIT, see [LICENSE.txt](LICENSE.txt). Test-only fzy sources retain their [upstream MIT license](test/vendor/fzy/LICENSE).
+## Contributing
+
+Bug reports and pull requests are welcome on [GitHub](https://github.com/noxdea/spica).
+
+## License
+
+Spica is released under the [MIT License](LICENSE.txt). The test-only fzy sources retain their [upstream MIT license](test/vendor/fzy/LICENSE).
+
+The name Spica comes from the part of a wheat ear that separates grain from chaff—much like this library separates useful matches from a large candidate list.

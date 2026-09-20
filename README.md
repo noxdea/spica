@@ -25,6 +25,8 @@
 
 Spica is a fuzzy matcher for command palettes and quick-open lists. It ranks subsequence matches, returns the character positions to highlight, and reuses previous results as a query grows. It has no runtime dependencies or native extensions.
 
+![Spica fuzzy matching](docs/media/screenshot.png)
+
 ## Features
 
 - fzy-style scoring with optimal alignments inside configurable length limits

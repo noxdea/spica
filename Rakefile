@@ -26,3 +26,8 @@ task :isolation do
 end
 
 task default: [:test, :isolation]
+
+desc "Regenerate deterministic demo media"
+task :demo do
+  Dir["demo/*.rb"].sort.each { |path| ruby "-Ilib", path }
+end

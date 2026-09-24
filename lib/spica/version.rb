@@ -2,5 +2,5 @@
 
 module Spica
   # Library semantic version.
-  VERSION = "0.1.1"
+  VERSION = "0.2.0"
 end

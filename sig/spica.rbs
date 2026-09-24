@@ -81,4 +81,9 @@ module Spica
     def matches: (?Integer limit) -> Array[Match]
     def total_matches: () -> Integer
   end
+
+  # Load with `require "spica/zaniah_matcher"`; the optional Zaniah gem supplies the result type.
+  class ZaniahMatcher
+    def match: (String query, Array[String] labels) -> Array[untyped]
+  end
 end

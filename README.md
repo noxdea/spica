@@ -120,6 +120,20 @@ Indexes deduplicate identical text. Removing and re-adding a candidate assigns i
 
 `Match#text` aliases `candidate`; `Match#index` is the stable registration ID. A session keeps the active prefix chain, while an unrelated query restarts from the full index. Display limits never discard candidates needed by the next query.
 
+### Zaniah command palettes and comboboxes
+
+The optional adapter requires Zaniah 0.7 or newer (below 1.0). It converts Spica's Unicode character positions to the UTF-8 byte ranges used by Zaniah's highlights:
+
+```ruby
+require "spica/zaniah_matcher"
+
+matcher = Spica::ZaniahMatcher.new
+Zaniah::UI::CommandPalette.new(commands, matcher: matcher)
+# Or: Zaniah.configure { |config| config.matcher = matcher }
+```
+
+The adapter preserves duplicate labels and reports each label's input-array index. This differs from `Spica::Match#index`, which identifies a deduplicated index entry. Non-UTF-8 multibyte labels are rejected because their original byte offsets cannot be used as Zaniah highlight ranges. The adapter does not implement optional incremental `refine`; Zaniah calls `match` on each query.
+
 ## Configuration
 
 Pass settings directly or reuse an immutable `Spica::Options` instance:

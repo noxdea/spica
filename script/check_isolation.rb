@@ -5,7 +5,10 @@ require "open3"
 require "rubygems/package"
 
 root = File.expand_path("..", __dir__)
+# The opt-in adapter is allowed to reference Zaniah; loading Spica itself is not.
+adapter = File.join(root, "lib/spica/zaniah_matcher.rb")
 Dir[File.join(root, "lib/**/*.rb")].each do |path|
+  next if path == adapter
   abort "application dependency in #{path}" if File.read(path).match?(/\b(?:Zaniah|Canopus)\b/)
 end
 spec = Gem::Specification.load(File.join(root, "spica.gemspec"))
